@@ -1,5 +1,4 @@
-import { Paper, Typography, Box, Button } from "@mui/material";
-import StyledDropdown from "./StyledDropdown";
+import { Paper, Box, Button, TextField, MenuItem } from "@mui/material";
 
 function TitleBlock({ rows, filters, setFilters }) {
   // 🔹 Apply filters to narrow down valid rows
@@ -20,33 +19,82 @@ function TitleBlock({ rows, filters, setFilters }) {
 
   return (
     <Paper sx={{ p: 3, mb: 3 }}>
-
-
       <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
-        <StyledDropdown
+        <TextField
+          select
           label="Customer"
           value={filters.ClientName || ""}
-          options={unique("ClientName")}
-          onChange={(val) => setFilters((prev) => ({ ...prev, ClientName: val }))}
-        />
-        <StyledDropdown
+          onChange={(e) =>
+            setFilters((prev) => ({ ...prev, ClientName: e.target.value }))
+          }
+          InputLabelProps={{ shrink: true }}
+          size="small"
+          sx={{ minWidth: 200 }}
+        >
+          <MenuItem value="">All</MenuItem>
+          {unique("ClientName").map((opt, idx) => (
+            <MenuItem key={idx} value={opt}>
+              {opt}
+            </MenuItem>
+          ))}
+        </TextField>
+
+        <TextField
+          select
           label="Commercial Name"
           value={filters.CustomerName || ""}
-          options={unique("CustomerName")}
-          onChange={(val) => setFilters((prev) => ({ ...prev, CustomerName: val }))}
-        />
-        <StyledDropdown
+          onChange={(e) =>
+            setFilters((prev) => ({ ...prev, CustomerName: e.target.value }))
+          }
+          InputLabelProps={{ shrink: true }}
+          size="small"
+          sx={{ minWidth: 200 }}
+        >
+          <MenuItem value="">All</MenuItem>
+          {unique("CustomerName").map((opt, idx) => (
+            <MenuItem key={idx} value={opt}>
+              {opt}
+            </MenuItem>
+          ))}
+        </TextField>
+
+        <TextField
+          select
           label="Account Manager"
           value={filters.AccountManager || ""}
-          options={unique("AccountManager")}
-          onChange={(val) => setFilters((prev) => ({ ...prev, AccountManager: val }))}
-        />
-        <StyledDropdown
+          onChange={(e) =>
+            setFilters((prev) => ({ ...prev, AccountManager: e.target.value }))
+          }
+          InputLabelProps={{ shrink: true }}
+          size="small"
+          sx={{ minWidth: 200 }}
+        >
+          <MenuItem value="">All</MenuItem>
+          {unique("AccountManager").map((opt, idx) => (
+            <MenuItem key={idx} value={opt}>
+              {opt}
+            </MenuItem>
+          ))}
+        </TextField>
+
+        <TextField
+          select
           label="Status"
           value={filters.Status || ""}
-          options={unique("Status")}
-          onChange={(val) => setFilters((prev) => ({ ...prev, Status: val }))}
-        />
+          onChange={(e) =>
+            setFilters((prev) => ({ ...prev, Status: e.target.value }))
+          }
+          InputLabelProps={{ shrink: true }}
+          size="small"
+          sx={{ minWidth: 200 }}
+        >
+          <MenuItem value="">All</MenuItem>
+          {unique("Status").map((opt, idx) => (
+            <MenuItem key={idx} value={opt}>
+              {opt}
+            </MenuItem>
+          ))}
+        </TextField>
 
         {/* Clear All Button */}
         <Button

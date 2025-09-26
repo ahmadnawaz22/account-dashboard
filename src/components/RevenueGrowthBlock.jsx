@@ -1,4 +1,4 @@
-import { Paper, Typography, Grid } from "@mui/material";
+import { Paper, Typography, Grid, Box } from "@mui/material";
 import {
   BarChart,
   Bar,
@@ -9,7 +9,6 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-// Small info card
 function InfoTile({ label, value }) {
   return (
     <Paper
@@ -31,7 +30,6 @@ function InfoTile({ label, value }) {
   );
 }
 
-// Currency formatter
 function formatCurrency(value) {
   if (!value || isNaN(value)) return "$0";
   if (Math.abs(value) >= 1_000_000)
@@ -41,7 +39,6 @@ function formatCurrency(value) {
   return "$" + value;
 }
 
-// Normalize ISO date → YYYY-MM
 function normalizeMonth(val) {
   if (!val) return "";
   const d = new Date(val);
@@ -61,11 +58,9 @@ function RevenueGrowthBlock({ rows, revenueSummary }) {
     );
   }
 
-  // Selected client
+  // (same calculations as before, shortened here for clarity)
   const r = rows[0];
   const clientName = r.ClientName;
-
-  // Normalize RevenueSummary
   const normalizedSummary = (revenueSummary || []).map((rec) => ({
     CustomerName: rec.CustomerName,
     SubProductName: rec.SubProductName,
@@ -73,32 +68,20 @@ function RevenueGrowthBlock({ rows, revenueSummary }) {
     MRR: Number(rec.MRR?.replace(/,/g, "")) || 0,
     Revenue: Number(rec.Revenue?.replace(/,/g, "")) || 0,
   }));
-
-  // Current month
   const todayMonth = normalizeMonth(new Date());
-
-  // 🔹 ARR
   const clientMRR = normalizedSummary
-    .filter(
-      (rec) => rec.CustomerName === clientName && rec.Month === todayMonth
-    )
+    .filter((rec) => rec.CustomerName === clientName && rec.Month === todayMonth)
     .reduce((sum, rec) => sum + rec.MRR, 0);
   const clientARR = clientMRR * 12;
-
   const totalMRR = normalizedSummary
     .filter((rec) => rec.Month === todayMonth)
     .reduce((sum, rec) => sum + rec.MRR, 0);
   const totalARR = totalMRR * 12;
   const arrPct = totalARR > 0 ? (clientARR / totalARR) * 100 : 0;
-
-  // 🔹 Annualized Revenue
   const clientMonthlyRevenue = normalizedSummary
-    .filter(
-      (rec) => rec.CustomerName === clientName && rec.Month === todayMonth
-    )
+    .filter((rec) => rec.CustomerName === clientName && rec.Month === todayMonth)
     .reduce((sum, rec) => sum + rec.Revenue, 0);
   const clientAnnualizedRevenue = clientMonthlyRevenue * 12;
-
   const totalMonthlyRevenue = normalizedSummary
     .filter((rec) => rec.Month === todayMonth)
     .reduce((sum, rec) => sum + rec.Revenue, 0);
@@ -108,7 +91,6 @@ function RevenueGrowthBlock({ rows, revenueSummary }) {
       ? (clientAnnualizedRevenue / totalAnnualizedRevenue) * 100
       : 0;
 
-  // 🔹 Last 12 months data
   const today = new Date();
   const last12Months = Array.from({ length: 12 }, (_, i) => {
     const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
@@ -119,13 +101,11 @@ function RevenueGrowthBlock({ rows, revenueSummary }) {
     const filtered = normalizedSummary.filter(
       (rec) => rec.CustomerName === clientName && rec.Month === ym
     );
-
     const grouped = {};
     filtered.forEach((rec) => {
       grouped[rec.SubProductName] =
         (grouped[rec.SubProductName] || 0) + rec.Revenue;
     });
-
     return { month: ym, ...grouped };
   });
 
@@ -143,60 +123,76 @@ function RevenueGrowthBlock({ rows, revenueSummary }) {
         Revenue & Growth
       </Typography>
 
-      {/* KPI tiles */}
-      <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={6} md={3}>
+      <Box sx={{ display: "flex", gap: 3 }}>
+        {/* KPI Column */}
+        <Box
+          sx={{
+            width: 240, // fixed width for tiles
+            flexShrink: 0,
+            display: "flex",
+            flexDirection: "column",
+            gap: 2,
+          }}
+        >
           <InfoTile label="Client ARR" value={formatCurrency(clientARR)} />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
           <InfoTile label="% of Total ARR" value={`${arrPct.toFixed(1)}%`} />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
           <InfoTile
             label="Client Annualized Revenue"
             value={formatCurrency(clientAnnualizedRevenue)}
           />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
           <InfoTile
             label="% of Total Revenue"
             value={`${revenuePct.toFixed(1)}%`}
           />
-        </Grid>
-      </Grid>
+        </Box>
 
-      {/* Chart */}
-      <Typography variant="subtitle1" sx={{ mb: 1, color: "secondary.main" }}>
-        Revenue per Month (last 12 months)
-      </Typography>
-      <ResponsiveContainer width="100%" height={300}>
-        <BarChart data={revenueByMonth}>
-          <XAxis
-            dataKey="month"
-            tickFormatter={(val) => {
-              const [y, m] = val.split("-");
-              return new Date(y, m - 1).toLocaleDateString("en-US", {
-                month: "short",
-                year: "2-digit",
-              });
-            }}
+        {/* Chart expands */}
+<Box sx={{ flexGrow: 1 }}>
+  <Typography variant="subtitle1" sx={{ mb: 1, color: "secondary.main" }}>
+    Revenue per Month (last 12 months)
+  </Typography>
+  <ResponsiveContainer width="100%" height={380}>
+    <BarChart data={revenueByMonth}>
+      <XAxis
+        dataKey="month"
+        tickFormatter={(val) => {
+          const [y, m] = val.split("-");
+          return new Date(y, m - 1).toLocaleDateString("en-US", {
+            month: "short",
+            year: "2-digit",
+          });
+        }}
+      />
+      <YAxis tickFormatter={(val) => formatCurrency(val)} />
+      <Tooltip formatter={(val) => formatCurrency(val)} />
+      <Legend
+        verticalAlign="top"
+        align="right"
+        wrapperStyle={{ paddingBottom: 10 }}
+      />
+      {subProducts.map((sub, idx) => {
+        const palette = [
+          "#1E88E5",
+          "#3949AB",
+          "#7E57C2",
+          "#26A69A",
+          "#546E7A",
+        ];
+        return (
+          <Bar
+            key={idx}
+            dataKey={sub}
+            stackId="a"
+            fill={palette[idx % palette.length]}
+            fillOpacity={1}
           />
-          <YAxis tickFormatter={(val) => formatCurrency(val)} />
-          <Tooltip formatter={(val) => formatCurrency(val)} />
-          <Legend />
-          {subProducts.map((sub, idx) => {
-            const palette = [
-              "#1E88E5", // Blue
-              "#3949AB", // Indigo
-              "#7E57C2", // Purple
-              "#26A69A", // Teal
-              "#546E7A", // Gray
-            ];
-            const color = palette[idx % palette.length];
-            return <Bar key={idx} dataKey={sub} stackId="a" fill={color} />;
-          })}
-        </BarChart>
-      </ResponsiveContainer>
+        );
+      })}
+    </BarChart>
+  </ResponsiveContainer>
+</Box>
+
+      </Box>
     </Paper>
   );
 }

@@ -1,7 +1,11 @@
+import { useState, useMemo } from "react";
 import {
   Paper,
   Typography,
   Grid,
+  FormControl,
+  Select,
+  MenuItem,
 } from "@mui/material";
 import {
   BarChart,
@@ -13,7 +17,6 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-// --- Helpers ---
 // Format numbers with k/m
 function formatNumber(value) {
   if (!value || isNaN(value)) return "0";
@@ -29,58 +32,111 @@ function ConsumptionBlock({ clientName, consumption }) {
     return (
       <Paper sx={{ p: 3, mb: 3 }}>
         <Typography variant="h6" color="primary.main">
-          12 months Consumption
+          Consumption
         </Typography>
         <Typography>No client selected</Typography>
       </Paper>
     );
   }
 
-  const today = new Date();
-
-  // 🔹 Last 12 months + current
-  const last13Months = Array.from({ length: 13 }, (_, i) => {
-    const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-  }).reverse();
-
-  // 🔹 Filter consumption for this client
+  // 🔹 Get all months available for this client
   const clientConsumption = (consumption || []).filter(
     (c) => c.ClientName === clientName
   );
 
-  // 🔹 Aggregate monthly by Product
-  const consumptionByMonth = last13Months.map((ym) => {
-    const filtered = clientConsumption.filter((c) =>
-      String(c.Month).startsWith(ym)
-    );
+  const allMonths = [
+    ...new Set(
+      clientConsumption
+        .map((c) => String(c.Month).slice(0, 7)) // YYYY-MM
+        .filter(Boolean)
+    ),
+  ].sort();
 
-    const grouped = {};
-    filtered.forEach((c) => {
-      const product = c.Product;
-      grouped[product] = (grouped[product] || 0) + (Number(c.Volume) || 0);
+  // 🔹 State for from/to months
+  const [fromMonth, setFromMonth] = useState(allMonths[0]);
+  const [toMonth, setToMonth] = useState(allMonths[allMonths.length - 1]);
+
+  // 🔹 Filtered data
+  const filtered = useMemo(() => {
+    if (!fromMonth || !toMonth) return [];
+    const fromIdx = allMonths.indexOf(fromMonth);
+    const toIdx = allMonths.indexOf(toMonth);
+    if (fromIdx === -1 || toIdx === -1 || fromIdx > toIdx) return [];
+
+    const range = allMonths.slice(fromIdx, toIdx + 1);
+
+    return range.map((ym) => {
+      const filtered = clientConsumption.filter((c) =>
+        String(c.Month).startsWith(ym)
+      );
+
+      const grouped = {};
+      filtered.forEach((c) => {
+        grouped[c.Product] =
+          (grouped[c.Product] || 0) + (Number(c.Volume) || 0);
+      });
+
+      return { month: ym, ...grouped };
     });
-
-    return { month: ym, ...grouped };
-  });
+  }, [clientConsumption, allMonths, fromMonth, toMonth]);
 
   // 🔹 Collect distinct products
   const products = [
     ...new Set(clientConsumption.map((c) => c.Product).filter(Boolean)),
   ];
 
-  // 🔹 Totals per product
+  // 🔹 Totals for selected period
   const totals = {};
-  clientConsumption.forEach((c) => {
-    totals[c.Product] = (totals[c.Product] || 0) + (Number(c.Volume) || 0);
+  filtered.forEach((rec) => {
+    products.forEach((p) => {
+      totals[p] = (totals[p] || 0) + (Number(rec[p]) || 0);
+    });
   });
 
   // --- UI ---
   return (
-    <Paper sx={{ p: 3, mb: 3 }}>
-      <Typography variant="h6" sx={{ mb: 2, color: "primary.main" }}>
-        12 months Consumption
-      </Typography>
+    <Paper sx={{ p: 3, mb: 3, height: "100%" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "1rem",
+        }}
+      >
+        <Typography variant="h6" sx={{ color: "primary.main" }}>
+          Consumption
+        </Typography>
+
+        {/* From / To Selectors */}
+        <div style={{ display: "flex", gap: "1rem" }}>
+          <FormControl size="small">
+            <Select value={fromMonth} onChange={(e) => setFromMonth(e.target.value)}>
+              {allMonths.map((m) => (
+                <MenuItem key={m} value={m}>
+                  {new Date(m + "-01").toLocaleDateString("en-US", {
+                    month: "short",
+                    year: "2-digit",
+                  })}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <FormControl size="small">
+            <Select value={toMonth} onChange={(e) => setToMonth(e.target.value)}>
+              {allMonths.map((m) => (
+                <MenuItem key={m} value={m}>
+                  {new Date(m + "-01").toLocaleDateString("en-US", {
+                    month: "short",
+                    year: "2-digit",
+                  })}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </div>
+      </div>
 
       {/* Totals per product */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
@@ -107,7 +163,7 @@ function ConsumptionBlock({ clientName, consumption }) {
 
       {/* Chart */}
       <ResponsiveContainer width="100%" height={300}>
-        <BarChart data={consumptionByMonth}>
+        <BarChart data={filtered}>
           <XAxis
             dataKey="month"
             tickFormatter={(val) => {
