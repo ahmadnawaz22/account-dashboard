@@ -77,7 +77,7 @@ function ClientHealthBlock({ rows, clients, receipts }) {
     { label: "Months to Renewal", value: clientMatch.MonthstoRenewal },
     { label: "License Type", value: clientMatch.LicenseType },
     { label: "Renewal Type", value: clientMatch.RenewalType },
-    { label: "Rollover Claue", value: clientMatch.Rollover },
+    { label: "Rollover Clause", value: clientMatch.Rollover },
     { label: "Status", value: clientMatch.Status },
     { label: "Total Collection", value: formatCurrency(totalCollection) }, // ✅ now works
   ];

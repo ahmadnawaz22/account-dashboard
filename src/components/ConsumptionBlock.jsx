@@ -2,10 +2,10 @@ import { useState, useMemo } from "react";
 import {
   Paper,
   Typography,
-  Grid,
   FormControl,
   Select,
   MenuItem,
+  Box,
 } from "@mui/material";
 import {
   BarChart,
@@ -39,24 +39,24 @@ function ConsumptionBlock({ clientName, consumption }) {
     );
   }
 
-  // 🔹 Get all months available for this client
+  // 🔹 Client consumption
   const clientConsumption = (consumption || []).filter(
     (c) => c.ClientName === clientName
   );
 
+  // 🔹 All months (YYYY-MM)
   const allMonths = [
     ...new Set(
       clientConsumption
-        .map((c) => String(c.Month).slice(0, 7)) // YYYY-MM
+        .map((c) => String(c.Month).slice(0, 7))
         .filter(Boolean)
     ),
   ].sort();
 
-  // 🔹 State for from/to months
   const [fromMonth, setFromMonth] = useState(allMonths[0]);
   const [toMonth, setToMonth] = useState(allMonths[allMonths.length - 1]);
 
-  // 🔹 Filtered data
+  // 🔹 Filtered data for chart
   const filtered = useMemo(() => {
     if (!fromMonth || !toMonth) return [];
     const fromIdx = allMonths.indexOf(fromMonth);
@@ -69,18 +69,16 @@ function ConsumptionBlock({ clientName, consumption }) {
       const filtered = clientConsumption.filter((c) =>
         String(c.Month).startsWith(ym)
       );
-
       const grouped = {};
       filtered.forEach((c) => {
         grouped[c.Product] =
           (grouped[c.Product] || 0) + (Number(c.Volume) || 0);
       });
-
       return { month: ym, ...grouped };
     });
   }, [clientConsumption, allMonths, fromMonth, toMonth]);
 
-  // 🔹 Collect distinct products
+  // 🔹 Distinct products
   const products = [
     ...new Set(clientConsumption.map((c) => c.Product).filter(Boolean)),
   ];
@@ -96,12 +94,13 @@ function ConsumptionBlock({ clientName, consumption }) {
   // --- UI ---
   return (
     <Paper sx={{ p: 3, mb: 3, height: "100%" }}>
-      <div
-        style={{
+      {/* Header */}
+      <Box
+        sx={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: "1rem",
+          mb: 2,
         }}
       >
         <Typography variant="h6" sx={{ color: "primary.main" }}>
@@ -109,7 +108,7 @@ function ConsumptionBlock({ clientName, consumption }) {
         </Typography>
 
         {/* From / To Selectors */}
-        <div style={{ display: "flex", gap: "1rem" }}>
+        <Box sx={{ display: "flex", gap: 2 }}>
           <FormControl size="small">
             <Select value={fromMonth} onChange={(e) => setFromMonth(e.target.value)}>
               {allMonths.map((m) => (
@@ -135,14 +134,25 @@ function ConsumptionBlock({ clientName, consumption }) {
               ))}
             </Select>
           </FormControl>
-        </div>
-      </div>
+        </Box>
+      </Box>
 
-      {/* Totals per product */}
-      <Grid container spacing={2} sx={{ mb: 3 }}>
-        {products.map((p, idx) => (
-          <Grid key={idx} item xs={12} sm={6} md={3}>
+      {/* Main content: Tiles left, Chart right */}
+      <Box sx={{ display: "flex", gap: 2, height: 400 }}>
+        {/* Tiles column */}
+        <Box
+          sx={{
+            width: 220,
+            flexShrink: 0,
+            display: "flex",
+            flexDirection: "column",
+            gap: 2,
+            overflowY: "auto",
+          }}
+        >
+          {products.map((p, idx) => (
             <Paper
+              key={idx}
               elevation={2}
               sx={{
                 p: 2,
@@ -157,35 +167,47 @@ function ConsumptionBlock({ clientName, consumption }) {
                 {formatNumber(totals[p])}
               </Typography>
             </Paper>
-          </Grid>
-        ))}
-      </Grid>
+          ))}
+        </Box>
 
-      {/* Chart */}
-      <ResponsiveContainer width="100%" height={300}>
-        <BarChart data={filtered}>
-          <XAxis
-            dataKey="month"
-            tickFormatter={(val) => {
-              const [y, m] = val.split("-");
-              return new Date(y, m - 1).toLocaleDateString("en-US", {
-                month: "short",
-                year: "2-digit",
-              });
-            }}
-          />
-          <YAxis />
-          <Tooltip />
-          <Legend />
-          {products.map((p, idx) => {
-            const palette = [
-              "#1E88E5", "#3949AB", "#7E57C2", "#26A69A", "#546E7A",
-            ];
-            const color = palette[idx % palette.length];
-            return <Bar key={idx} dataKey={p} stackId="a" fill={color} />;
-          })}
-        </BarChart>
-      </ResponsiveContainer>
+        {/* Chart */}
+        <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={filtered}>
+              <XAxis
+                dataKey="month"
+                tickFormatter={(val) => {
+                  const [y, m] = val.split("-");
+                  return new Date(y, m - 1).toLocaleDateString("en-US", {
+                    month: "short",
+                    year: "2-digit",
+                  });
+                }}
+              />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              {products.map((p, idx) => {
+                const palette = [
+                  "#1E88E5",
+                  "#3949AB",
+                  "#7E57C2",
+                  "#26A69A",
+                  "#546E7A",
+                ];
+                return (
+                  <Bar
+                    key={idx}
+                    dataKey={p}
+                    stackId="a"
+                    fill={palette[idx % palette.length]}
+                  />
+                );
+              })}
+            </BarChart>
+          </ResponsiveContainer>
+        </Box>
+      </Box>
     </Paper>
   );
 }
